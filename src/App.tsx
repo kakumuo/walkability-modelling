@@ -1,45 +1,4 @@
-import React from 'react'
-import * as THREE from 'three'; 
-import { AppInterface } from './interface/AppInterface';
 
-export const App = () => {
-    const refContainer = React.useRef<HTMLDivElement>(null); 
-    const [init, setInit] = React.useState(false); 
-
-    React.useEffect(() => {
-        const scene = new THREE.Scene(); 
-        const canvas = THREE.createCanvasElement(); 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, .1, 1000); 
-        const renderer = new THREE.WebGLRenderer({canvas: canvas});
-
-        renderer.setSize(window.innerWidth, window.innerHeight, true); 
-
-        console.log('added element'); 
-
-        if(refContainer.current && !init){
-            setInit(true); 
-            refContainer.current.appendChild(renderer.domElement); 
-        }
-
-        const geometry = new THREE.BoxGeometry(1, 1, 1); 
-        const material = new THREE.MeshBasicMaterial({color: "#00bb00"}); 
-        const cube = new THREE.Mesh(geometry, material); 
-
-        scene.add(cube); 
-        camera.position.z = 5; 
-
-        var animate = () => {
-            requestAnimationFrame(animate); 
-            cube.rotation.x += .01; 
-            cube.rotation.y += .01; 
-            renderer.render(scene, camera); 
-        }
-
-        animate(); 
-    }, []); 
-
-    return <div>
-        <div ref={refContainer} />
-        <AppInterface />
-    </div>
+export function App(){
+    return <div>Test</div>
 }
