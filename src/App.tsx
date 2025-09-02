@@ -1,5 +1,4 @@
 import '@mantine/core/styles.css'
-import {IconLayoutSidebarInactive} from '@tabler/icons-react'
 import { MantineProvider, Button, Box, Input } from '@mantine/core';
 import { MapDisplay } from './components/MapDisplay';
 import { SidebarOverlay } from './components/SidebarOverlay';

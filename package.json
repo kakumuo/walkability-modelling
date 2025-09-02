@@ -7,6 +7,7 @@
   "author": "",
   "license": "ISC",
   "scripts": {
+    "setVersion": "Set-NodeVersion",
     "dev": "vite --port 4000",
     "build": "tsc -b && vite build",
     "preview": "vite preview"

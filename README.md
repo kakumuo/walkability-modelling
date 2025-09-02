@@ -7,5 +7,8 @@
     - Typescript
     - Mantine UI
 - Backend: 
-    - Go
+    - Go & Air
     - OSM
+        - https://nominatim.org/release-docs/latest/api/Overview/
+        - https://wiki.openstreetmap.org/wiki/Overpass_API/Overpass_QL
+        - https://overpass-turbo.eu/index.html
