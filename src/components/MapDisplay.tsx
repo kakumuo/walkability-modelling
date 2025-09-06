@@ -55,6 +55,7 @@ export function MapDisplay(){
     if(!sceneGeometry) return res
 
     // geometry from input
+    //FIXME: Mesh geometry is skewed to a certain direction
     sceneGeometry.Data.Structures.forEach((curStructure, i) => {
       var target:JSX.Element = null!
 
