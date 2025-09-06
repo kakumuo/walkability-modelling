@@ -4,6 +4,7 @@ import { MapDisplay } from './components/MapDisplay';
 import { SidebarOverlay } from './components/SidebarOverlay';
 import { VisualizationOverlay } from './components/VisualizationOverlay';
 import { HeaderComponent } from './components/HeaderComponent';
+import { Canvas } from '@react-three/fiber';
 
 
 export function App() {
@@ -12,7 +13,9 @@ export function App() {
       {/* <HeaderComponent className={styles.header} />
       <SidebarOverlay className={styles.aside} />
       <VisualizationOverlay className={styles.visualizations} /> */}
-      <MapDisplay className={styles.mapDisplay} />
+      <Canvas className={styles.mapDisplay}>
+        <MapDisplay/>
+      </Canvas>
     </Box>
   </MantineProvider>;
 }

@@ -17,15 +17,15 @@ type OSMElement struct {
 }
 
 type OSMBounds struct {
-	MaxLat float32 `json:"maxlat"`
-	MaxLon float32 `json:"maxlon"`
-	MinLat float32 `json:"minlat"`
-	MinLon float32 `json:"minlon"`
+	MaxLat float64 `json:"maxlat"`
+	MaxLon float64 `json:"maxlon"`
+	MinLat float64 `json:"minlat"`
+	MinLon float64 `json:"minlon"`
 }
 
 type OSMPoint struct {
-	Lat float32 `json:"lat"`
-	Lon float32 `json:"lon"`
+	Lat float64 `json:"lat"`
+	Lon float64 `json:"lon"`
 }
 
 type OSMTagSet struct {
@@ -42,7 +42,7 @@ type OSMLocation struct {
 	BoundingBox [4]json.Number `json:"boundingbox"`
 	Category    string         `json:"category"`
 	DisplayName string         `json:"display_name"`
-	Importance  float32        `json:"importance"`
+	Importance  float64        `json:"importance"`
 	Latitude    json.Number    `json:"lat"`
 	Longitude   json.Number    `json:"lon"`
 	License     string         `json:"license"`

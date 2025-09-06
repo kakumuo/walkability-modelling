@@ -4,11 +4,18 @@ import (
 	"encoding/json"
 )
 
+// API Response
+type ResponseMessage struct {
+	Success bool
+	Message string
+	Data    any
+}
+
 type Point struct {
-	Longitude float32
-	Latitude  float32
-	X         float32
-	Y         float32
+	Longitude float64
+	Latitude  float64
+	X         float64
+	Y         float64
 }
 
 type Node struct {
@@ -26,21 +33,21 @@ type Structure struct {
 }
 
 type Model struct {
-	Id          int
-	Structures  []Structure
-	ModelCenter struct {
+	Id         int
+	Structures []Structure
+	Bounds     struct {
 		Center Point
-		Radius float32
+		Radius float64
 	}
 }
 
-func NewModel(resp OSMGeometry, rad float32, lon float32, lat float32) Model {
+func NewModel(resp OSMGeometry, rad float64, lon float64, lat float64) Model {
 	res := Model{}
-	var minLat, minLon float32 = 181, 91
-	var maxLat, maxLon float32 = -181, -91
+	var minLat, minLon float64 = 181, 91
+	var maxLat, maxLon float64 = -181, -91
 
-	norm := func(val, minval, maxval float32) float32 {
-		return val - (minval+maxval)/2
+	norm := func(val, center float64) float64 {
+		return (val - center)
 	}
 
 	for _, element := range resp.Elements {
@@ -50,8 +57,8 @@ func NewModel(resp OSMGeometry, rad float32, lon float32, lat float32) Model {
 		maxLon = min(maxLon, element.Bounds.MaxLon)
 	}
 
-	res.ModelCenter.Radius = rad
-	res.ModelCenter.Center = Point{
+	res.Bounds.Radius = rad
+	res.Bounds.Center = Point{
 		Longitude: lon,
 		Latitude:  lat,
 		X:         0,
@@ -61,22 +68,27 @@ func NewModel(resp OSMGeometry, rad float32, lon float32, lat float32) Model {
 	for _, element := range resp.Elements {
 
 		curStruct := Structure{
-			Id:            element.Id,
-			StructureType: element.Tags.Building,
+			Id: element.Id,
+		}
+
+		if element.Tags.Building != "" {
+			curStruct.StructureType = element.Tags.Building
+		} else if element.Tags.Highway != "" {
+			curStruct.StructureType = element.Tags.Highway
 		}
 
 		curStruct.BoundMax = Point{
 			Latitude:  element.Bounds.MaxLat,
 			Longitude: element.Bounds.MaxLon,
-			X:         norm(element.Bounds.MaxLat, maxLat, minLat),
-			Y:         norm(element.Bounds.MaxLon, maxLon, minLon),
+			X:         norm(element.Bounds.MaxLat, lat),
+			Y:         norm(element.Bounds.MaxLon, lon),
 		}
 
 		curStruct.BoundMin = Point{
 			Latitude:  element.Bounds.MinLat,
 			Longitude: element.Bounds.MinLon,
-			X:         norm(element.Bounds.MinLat, maxLat, minLat),
-			Y:         norm(element.Bounds.MinLon, maxLon, minLon),
+			X:         norm(element.Bounds.MinLat, lat),
+			Y:         norm(element.Bounds.MinLon, lon),
 		}
 
 		for i, geom := range element.Geometry {
@@ -85,8 +97,8 @@ func NewModel(resp OSMGeometry, rad float32, lon float32, lat float32) Model {
 				Point: Point{
 					Latitude:  geom.Lat,
 					Longitude: geom.Lon,
-					X:         norm(geom.Lat, maxLat, minLat),
-					Y:         norm(geom.Lon, maxLon, minLon),
+					X:         norm(geom.Lat, lat),
+					Y:         norm(geom.Lon, lon),
 				},
 			}
 

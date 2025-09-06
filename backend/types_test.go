@@ -12,7 +12,7 @@ func TestModel(t *testing.T) {
 	file, _ := os.ReadFile(fileName)
 
 	var data OSMGeometry
-	var rad, lat, lon float32 = 40.000000, 40.668828, -75.470724
+	var rad, lat, lon float64 = 40.000000, 40.668828, -75.470724
 	err := json.Unmarshal(file, &data)
 
 	if err != nil {

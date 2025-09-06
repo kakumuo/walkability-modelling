@@ -11,12 +11,6 @@ import (
 	"strings"
 )
 
-type ResponseMessage struct {
-	Success bool
-	Message string
-	Data    any
-}
-
 /*
 	api
 		location
@@ -181,7 +175,7 @@ func main() {
 			responseData.Message = "success"
 			responseData.Success = true
 
-			responseData.Data = NewModel(bodyJson, float32(rad), float32(lon), float32(lat))
+			responseData.Data = NewModel(bodyJson, rad, lon, lat)
 			// responseData.Data = bodyJson
 		}
 	})
