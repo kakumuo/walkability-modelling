@@ -9,10 +9,14 @@ type ResponseMessage<T> = {
 type Model = {
   Id: number;
   Structures: Structure[];
-  Bounds: {
+  Bounds: Bounds
+};
+
+type Bounds = {
     Center: Point;
+    BoundMin: Point;
+    BoundMax: Point;
     Radius: number;
-  };
 };
 
 type Structure = {
@@ -30,6 +34,17 @@ type Point = {
   X: number;
   Y: number;
 };
+
+type PointCloudNode = {
+	Id:             number
+	Point:          Point
+	Traversability: number
+	IsEntrance:     boolean
+}
+
+type PointCloud = {
+  Points: PointCloudNode[]
+}
 
 type Node = {
   Id: number;

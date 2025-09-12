@@ -19,6 +19,6 @@ func TestModel(t *testing.T) {
 		t.Error(err)
 	}
 
-	model := NewModel(data, rad, lat, lon)
+	model := NewStructureModel(data, rad, lat, lon)
 	fmt.Println(model)
 }

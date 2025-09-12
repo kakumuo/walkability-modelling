@@ -1,114 +1,139 @@
-import { Canvas, useThree, type Args } from "@react-three/fiber";
+import { useThree } from "@react-three/fiber";
 import * as THREE from 'three'
-import {Stats, OrbitControls, Line} from '@react-three/drei'
-import React, { type JSX } from "react";
-import {Client} from '../api/Client'
-import type { ResponseMessage, Model, Structure } from "src/api/types"
+import { OrbitControls} from '@react-three/drei'
+import React from "react";
+import type { Model, Structure, PointCloud, Bounds } from "src/api/types"
 
-import data from './../data/geometrytest3.json'
+import structData from '../../backend/data/models/1757698261301/structModel.json'
+import pointData from '../../backend/data/models/1757698261301/pointCloud.json'
 
-const validBulidingTypes = [
-  "church", "semidetached_house"
-]
-
-const validRoadTypes = [
-  "secondary", "road", "residential"
-]
-
-const MODEL_SCALING = 20_000
+const SCALING = 10_000
+const MODEL_SCALING_2D:THREE.Vector2 = new THREE.Vector2(SCALING, SCALING * .75)
+const MODEL_SCALING_3D:THREE.Vector3 = new THREE.Vector3(SCALING, 0, SCALING * .75)
 
 
 export function MapDisplay(){
-  const [sceneGeometry, setSceneGeometry] = React.useState<ResponseMessage<Model>>()
+  const [sceneGeometry, setSceneGeometry] = React.useState<Model>()
+  const [pointCloud, setPointCloud] = React.useState<PointCloud>()
   const { camera } = useThree()
 
-  React.useEffect(() => {
-    // set orbit controls camera
-    var cameraOffset = new THREE.Vector3(75, 75, 0)
+  // set orbit controls camera
+  React.useEffect(() => {    
+    var cameraOffset = new THREE.Vector3(-2, 10, 0)
 
     camera.position.x = cameraOffset.x
     camera.position.y = cameraOffset.y
     camera.position.z = cameraOffset.z
 
-    // if(sceneGeometry) {
-    //   var item0 = sceneGeometry.Data.Structures[0].Nodes[0]
-    //   camera.position.x = item0.Point.Latitude
-    //   camera.position.z = item0.Point.Longitude
-    // }
-
-    camera.lookAt(new THREE.Vector3())   
+    camera.lookAt(new THREE.Vector3())       
     
   }, [camera, sceneGeometry])
 
+  // get data
   React.useEffect(() => {
-    // get data
     (async() => {
-        const g:ResponseMessage<Model> = data as any
-        setSceneGeometry(g)
+        setSceneGeometry(structData as Model)
+        setPointCloud(pointData as PointCloud)
     })()
   }, [])
 
+  // // generate point cloud
+  // const pointCloud = React.useMemo(() => {
+  //   const points:Point[] = []
 
-  const sceneObjs = React.useMemo(() => {
-    const res:JSX.Element[] = []
+  //   if(!sceneGeometry) return points; 
 
-    if(!sceneGeometry) return res
+  //   const density = 5.0
+  //   const [,, rad] = [,, sceneGeometry.Bounds.Radius / 4]
+    
+  //   for(let x = -rad; x <= rad; x += (1 / density)) {
+  //     for(let y = -rad; y <= rad; y += (1 / density)) {
+  //       points.push({x, y})
+  //     }
+  //   }
+
+  //   return points
+  // }, [sceneGeometry])
+
+  const {roadMeshes, buildingMeshes, terrainMesh} = React.useMemo(() => {
+    const roadMeshes:React.JSX.Element[] = []
+    const buildingMeshes:React.JSX.Element[] = []
+    const terrainMesh:React.JSX.Element[] = []
+
+    if(!sceneGeometry || !pointCloud) return {roadMeshes, buildingMeshes, terrainMesh}
 
     // geometry from input
     //FIXME: Mesh geometry is skewed to a certain direction
-    sceneGeometry.Data.Structures.forEach((curStructure, i) => {
-      var target:JSX.Element = null!
-
-      if(validBulidingTypes.includes(curStructure.StructureType))
-        target = <BuildingMesh key={i} structure={curStructure} />
-
-      else if (validRoadTypes.includes(curStructure.StructureType))
-        target = <RoadMesh key={i} structure={curStructure} />
-
-      if(target) res.push(target)
+    sceneGeometry.Structures.forEach((curStructure, i) => {
+      if(curStructure.StructureType == "building")
+        buildingMeshes.push(<BuildingMesh key={i} structure={curStructure} />)
+      else if (curStructure.StructureType == "road")
+        roadMeshes.push(<>
+          <RoadMesh key={i} structure={curStructure} />
+          <DebugMesh key={"d-" + i} structure={curStructure}/>
+        </>)
     })
 
-    // terrain
-    res.push(<TerrainMesh size={sceneGeometry.Data.Bounds.Radius} />)
+    // FIXME: correct radius sizing
+    terrainMesh.push(<TerrainMesh bounds={sceneGeometry.Bounds} />)
+    terrainMesh.push(<PointCloud pointCloud={pointCloud} />)
+    
+    return {roadMeshes, buildingMeshes, terrainMesh}
+  }, [sceneGeometry, pointCloud])
 
-    return res
-  }, [sceneGeometry])
+
 
   return <><OrbitControls  camera={camera} />
-    {sceneGeometry && 
-    <>
-        {sceneObjs}
-        <gridHelper args={[sceneGeometry.Data.Bounds.Radius]}/>
-    </>}
+    {sceneGeometry && <>{roadMeshes} {buildingMeshes} {terrainMesh}</>}
     
     <ambientLight intensity={0.1} />
-    <directionalLight position={[0, 0, 5]} color="white"/>
+    <directionalLight position={[0, 100, 0]} color="white"/>
   </>
 }
 
-function TerrainMesh (props:{size:number}) {
-  return <mesh position={[0, -.5, 0]} rotation={[Math.PI / 2, 0, 0]}>
-    <planeGeometry args={[props.size, props.size]} />
-    <meshBasicMaterial color={"#a7f3a7"} side={THREE.DoubleSide} />
-  </mesh>
+function TerrainMesh (props:{bounds:Bounds}) {
+  const {width, height, size} = React.useMemo(() => {
+      /*
+      radLat := rad / 111_111
+      radLon := radLat / math.Cos(lat*0.01745)
+      */  
+    
+     const width = (props.bounds.BoundMax.X - props.bounds.BoundMin.X) * MODEL_SCALING_2D.x
+     const height = (props.bounds.BoundMax.Y - props.bounds.BoundMin.Y) * MODEL_SCALING_2D.y
+     const size = Math.max(width, height)
+
+      return {width, height, size}
+  }, [props.bounds])
+  
+  return <>
+    <mesh position={[0, -.01, 0]} rotation={[Math.PI / 2, 0, 0]}>
+      <planeGeometry args={[width, height]} />
+      <meshBasicMaterial color={"#a7f3a7"} side={THREE.DoubleSide} />
+    </mesh>
+    <gridHelper args={[size]}/>
+  </>
+}
+
+function PointCloud (props: {pointCloud:PointCloud}) {
+  return <>{props.pointCloud.Points.map((p, i) => 
+    <mesh position={new THREE.Vector3(p.Point.X, 0, p.Point.Y).multiply(MODEL_SCALING_3D)}  key={"p-" + i} >
+      <sphereGeometry args={[.1]} />
+      <meshBasicMaterial color={"black"} />
+    </mesh>)}
+  </>
 }
 
 
 function BuildingMesh(props:{ structure:Structure }) {
-  const {shape, center} = React.useMemo(() => {
-    const points = props.structure.Nodes.map(n => new THREE.Vector2(n.Point.X, n.Point.Y).multiplyScalar(MODEL_SCALING));
+  // const height = Math.random() * .75 + .25
+  const height = 1
+
+  const {shape} = React.useMemo(() => {
+    const points = props.structure.Nodes.map(n => new THREE.Vector2(n.Point.X, -n.Point.Y).multiply(MODEL_SCALING_2D));
 
     const shape = new THREE.Shape(points);
-    const center = new THREE.Vector3(
-      (props.structure.BoundMax.X + props.structure.BoundMin.X) / 2, 
-      0, 
-      (props.structure.BoundMax.Y + props.structure.BoundMin.Y) / 2, 
-    ); 
-
-    return {shape, center}
+    return {shape}
   }, [props.structure.Nodes]);
-
-  const height = parseFloat(props.structure.StructureDetails?.height) || 2;
 
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} >
@@ -119,31 +144,62 @@ function BuildingMesh(props:{ structure:Structure }) {
 }
 
 
-function RoadMesh(props:{ structure:Structure }) {
-  
+function RoadMesh(props:{ structure:Structure}) {
+
   const {path, crossSection} = React.useMemo(() => {
-    const points = props.structure.Nodes.map(n => new THREE.Vector3(n.Point.X, 0, n.Point.Y).multiplyScalar(MODEL_SCALING))
+    const points = props.structure.Nodes.map(n => new THREE.Vector3(n.Point.X, 0, n.Point.Y).multiply(MODEL_SCALING_3D))
     const path = new THREE.CurvePath<THREE.Vector3>()
     for(let i = 1; i < points.length; i++){
       path.add(new THREE.LineCurve3(points[i - 1], points[i]))
     }
 
+    let roadRadius = 0
+
+    switch(props.structure.StructureDetails["highway"]) {
+      case "secondary": 
+        roadRadius = 4.5; 
+        break; 
+      case "residential":
+        roadRadius = 3; 
+        break;
+      case "service":
+        roadRadius = 1; 
+        break;
+      default: 
+        roadRadius = 2; 
+    }
+
     const crossSection = new THREE.Shape([
-      new THREE.Vector2(0, -1), 
-      new THREE.Vector2(0, 1)
+      new THREE.Vector2(0,(-.1/SCALING) * roadRadius * MODEL_SCALING_2D.x), 
+      new THREE.Vector2(0, (.1/SCALING) * roadRadius * MODEL_SCALING_2D.y)
     ])
 
-    return {path, crossSection}
+    return {path, crossSection, roadRadius}
   }, [props.structure.Nodes]);
-
-  const roadWidth = parseFloat(props.structure.StructureDetails?.width) || 2;
 
   return (
     <mesh>
-      <extrudeGeometry args={[crossSection, {extrudePath: path}]} />
+      <extrudeGeometry args={[crossSection, {extrudePath: path, steps: 100, curveSegments: 100}]} />
       <meshStandardMaterial color="white" />
-    </mesh>
+    </mesh> 
   );
+}
+
+
+function DebugMesh(props:{structure:Structure}) {
+  const colorArr = ["white", "blue", "orange", "green"]
+  const [color, _] = React.useState(colorArr[Math.ceil(Math.random() * colorArr.length)])
+
+  const points = React.useMemo(() => {
+    return props.structure.Nodes.map(n => new THREE.Vector3(n.Point.X, 0, n.Point.Y).multiply(MODEL_SCALING_3D))
+  }, [props.structure.Nodes]);
+
+  return <>{points.map((p, i) => 
+      <mesh key={"d-" + i} position={p}>
+        <sphereGeometry args={[.05]} />
+        <meshStandardMaterial color={color} />
+      </mesh>
+  )}</>
 }
 
 

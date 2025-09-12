@@ -7,9 +7,14 @@
 
 # testing
 /coverage
+/backend/tmp
 
 # production
 /build
+
+# data
+/backend/data
+/src/data
 
 # misc
 .DS_Store

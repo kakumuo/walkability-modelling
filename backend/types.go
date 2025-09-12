@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"math"
+	"time"
 )
 
 // API Response
@@ -18,6 +20,19 @@ type Point struct {
 	Y         float64
 }
 
+func (o Point) Distance(d Point) float64 {
+	return math.Sqrt(math.Pow(d.X-o.X, 2) + math.Pow(d.Y-o.Y, 2))
+}
+
+func (o Point) Midpoint(d Point) Point {
+	return Point{
+		Latitude:  (d.Latitude + o.Latitude) / 2,
+		Longitude: (d.Longitude + o.Longitude) / 2,
+		X:         (d.X + o.X) / 2,
+		Y:         (d.Y + o.Y) / 2,
+	}
+}
+
 type Node struct {
 	Id    int
 	Point Point
@@ -32,17 +47,36 @@ type Structure struct {
 	StructureDetails map[string]string
 }
 
-type Model struct {
-	Id         int
-	Structures []Structure
-	Bounds     struct {
-		Center Point
-		Radius float64
+func (s Structure) containsPointBounds(p Point) bool {
+	return p.Latitude > s.BoundMin.Latitude && p.Latitude < s.BoundMax.Latitude && p.Longitude < s.BoundMin.Longitude && p.Longitude > s.BoundMax.Longitude
+}
+
+type StructureModel struct {
+	Id           int
+	Structures   []Structure
+	PathingModel PointCloud
+	Bounds       struct {
+		Center   Point
+		BoundMin Point
+		BoundMax Point
+		Radius   float64
 	}
 }
 
-func NewModel(resp OSMGeometry, rad float64, lon float64, lat float64) Model {
-	res := Model{}
+type ModelConfig struct {
+	Name        string
+	Id          int64
+	CreatedDate time.Time
+	UpdatedDate time.Time
+}
+
+const (
+	STRUCTURETYPE_BUILDLING = "building"
+	STRUCTURETYPE_ROAD      = "road"
+)
+
+func NewStructureModel(resp OSMGeometry, rad float64, lon float64, lat float64) StructureModel {
+	res := StructureModel{}
 	var minLat, minLon float64 = 181, 91
 	var maxLat, maxLon float64 = -181, -91
 
@@ -65,6 +99,30 @@ func NewModel(resp OSMGeometry, rad float64, lon float64, lat float64) Model {
 		Y:         0,
 	}
 
+	// Conversion factors
+	metersPerDegLat := 111320.0
+	metersPerDegLon := 111320.0 * math.Cos(lat*math.Pi/180.0)
+
+	// Convert meters to degrees
+	radLat := rad / metersPerDegLat
+	radLon := rad / metersPerDegLon
+
+	res.Bounds.BoundMin = Point{
+		Longitude: lon - radLon,
+		Latitude:  lat - radLat,
+		X:         -radLat,
+		Y:         -radLon,
+	}
+
+	res.Bounds.BoundMax = Point{
+		Longitude: lon + radLon,
+		Latitude:  lat + radLat,
+		X:         radLat,
+		Y:         radLon,
+	}
+
+	//TODO: generate point cloud
+
 	for _, element := range resp.Elements {
 
 		curStruct := Structure{
@@ -72,9 +130,9 @@ func NewModel(resp OSMGeometry, rad float64, lon float64, lat float64) Model {
 		}
 
 		if element.Tags.Building != "" {
-			curStruct.StructureType = element.Tags.Building
+			curStruct.StructureType = STRUCTURETYPE_BUILDLING
 		} else if element.Tags.Highway != "" {
-			curStruct.StructureType = element.Tags.Highway
+			curStruct.StructureType = STRUCTURETYPE_ROAD
 		}
 
 		curStruct.BoundMax = Point{
@@ -113,5 +171,86 @@ func NewModel(resp OSMGeometry, rad float64, lon float64, lat float64) Model {
 		res.Structures = append(res.Structures, curStruct)
 	}
 
+	// res.PathingModel = NewPathingModel(resp, rad, lon, lat)
 	return res
+}
+
+type PointCloudNode struct {
+	Id             int
+	Point          Point
+	Traversability int8
+	IsEntrance     bool
+}
+
+type PointCloud struct {
+	Points []PointCloudNode
+}
+
+func NewPointCloud(model StructureModel, rad float64, lon float64, lat float64) PointCloud {
+	points := make([]PointCloudNode, 0)
+	curId := 0
+
+	// meter to lat:
+	radLat := rad / 111_111
+	radLon := radLat / math.Cos(lat*0.01745)
+	density := 4 // {density} nodes for every meter
+
+	latInc, lonInc := (radLat / float64(density)), (radLon / float64(density))
+
+	//FIXME: sometimes generates one less row than needed
+	for curLat := lat - radLat; curLat < lat+radLat; curLat += latInc {
+		for curLon := lon - radLon; curLon < lon+radLon; curLon += lonInc {
+			curPoint := Point{
+				Longitude: curLon,
+				Latitude:  curLat,
+				X:         lat - curLat,
+				Y:         lon - curLon,
+			}
+
+			curNode := PointCloudNode{
+				Id:             curId,
+				Point:          curPoint,
+				Traversability: 10,
+			}
+
+			for _, s := range model.Structures {
+				// TODO: check with bulidling points, instead of bounds
+				if s.containsPointBounds(curPoint) {
+					switch s.StructureType {
+					case STRUCTURETYPE_BUILDLING:
+						curNode.Traversability = 0
+					case STRUCTURETYPE_ROAD:
+						curNode.Traversability = 5
+					}
+					break
+				}
+			}
+
+			points = append(points, curNode)
+			curId += 1
+		}
+	}
+
+	// add building entrance and exits
+	const BUILDING_ENTRANCE_THRESH = .0001
+	for _, s := range model.Structures {
+		for i := 1; i < len(s.Nodes); i++ {
+			cur, prev := s.Nodes[i], s.Nodes[i-1]
+
+			if cur.Point.Distance(prev.Point) > BUILDING_ENTRANCE_THRESH {
+				points = append(points, PointCloudNode{
+					Id:             curId,
+					Point:          prev.Point.Midpoint(cur.Point),
+					Traversability: 10,
+					IsEntrance:     true,
+				})
+
+				curId += 1
+			}
+		}
+	}
+
+	return PointCloud{
+		Points: points,
+	}
 }
