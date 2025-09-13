@@ -129,30 +129,30 @@ func main() {
 			fmt.Fprint(w, string(responseJson))
 		}()
 
+		// TODO: when modelId is not included in query, select all
 		if !req.URL.Query().Has("modelId") {
-			responseData.Success = false
-			responseData.Message = "Field 'modelId' required in query"
-			return
-		}
+			// filePath := fmt.Sprintf("%s/%s/config.json", MODELS_PATH, "*")
+			// files
+		} else {
+			modelId := req.URL.Query().Get("modelId")
+			filePath := fmt.Sprintf("%s/%s/config.json", MODELS_PATH, modelId)
+			data, err := os.ReadFile(filePath)
 
-		modelId := req.URL.Query().Get("modelId")
-		filePath := fmt.Sprintf("%s/%s/config.json", MODELS_PATH, modelId)
-		data, err := os.ReadFile(filePath)
+			if err != nil {
+				responseData.Success = false
+				responseData.Message = fmt.Sprintf("Model not found with id: %s", modelId)
+				return
+			}
 
-		if err != nil {
-			responseData.Success = false
-			responseData.Message = fmt.Sprintf("Model not found with id: %s", modelId)
-			return
+			var outputObj ModelConfig
+			err = json.Unmarshal(data, &outputObj)
+			if err != nil {
+				responseData.Message = err.Error()
+				responseData.Success = false
+				return
+			}
+			responseData.Data = outputObj
 		}
-
-		var outputObj ModelConfig
-		err = json.Unmarshal(data, &outputObj)
-		if err != nil {
-			responseData.Message = err.Error()
-			responseData.Success = false
-			return
-		}
-		responseData.Data = outputObj
 	})
 
 	http.HandleFunc("POST /api/model/init", func(w http.ResponseWriter, req *http.Request) {

@@ -117,7 +117,7 @@ function TerrainMesh (props:{bounds:Bounds}) {
 function PointCloud (props: {pointCloud:PointCloud}) {
   return <>{props.pointCloud.Points.map((p, i) => 
     <mesh position={new THREE.Vector3(p.Point.X, 0, p.Point.Y).multiply(MODEL_SCALING_3D)}  key={"p-" + i} >
-      <sphereGeometry args={[.1]} />
+      <sphereGeometry args={[.025]} />
       <meshBasicMaterial color={"black"} />
     </mesh>)}
   </>

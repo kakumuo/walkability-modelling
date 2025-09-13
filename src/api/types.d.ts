@@ -51,6 +51,13 @@ type Node = {
   Point: Point;
 };
 
+type ModelConfig = {
+  Name:string, 
+  Id:number, 
+  CreatedDate:number, 
+  UpdatedDate:number
+}
+
 // Address details
 export interface OSMAddress {
   ISO3166_2_lvl4: string;

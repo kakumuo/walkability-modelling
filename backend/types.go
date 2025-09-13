@@ -193,13 +193,13 @@ func NewPointCloud(model StructureModel, rad float64, lon float64, lat float64) 
 	// meter to lat:
 	radLat := rad / 111_111
 	radLon := radLat / math.Cos(lat*0.01745)
-	density := 4 // {density} nodes for every meter
+	density := 5 // {density} nodes for every meter
 
 	latInc, lonInc := (radLat / float64(density)), (radLon / float64(density))
 
 	//FIXME: sometimes generates one less row than needed
-	for curLat := lat - radLat; curLat < lat+radLat; curLat += latInc {
-		for curLon := lon - radLon; curLon < lon+radLon; curLon += lonInc {
+	for curLat := lat - radLat; curLat <= lat+radLat; curLat += latInc {
+		for curLon := lon - radLon; curLon <= lon+radLon; curLon += lonInc {
 			curPoint := Point{
 				Longitude: curLon,
 				Latitude:  curLat,
@@ -234,6 +234,10 @@ func NewPointCloud(model StructureModel, rad float64, lon float64, lat float64) 
 	// add building entrance and exits
 	const BUILDING_ENTRANCE_THRESH = .0001
 	for _, s := range model.Structures {
+		if s.StructureType != STRUCTURETYPE_BUILDLING {
+			continue
+		}
+
 		for i := 1; i < len(s.Nodes); i++ {
 			cur, prev := s.Nodes[i], s.Nodes[i-1]
 
