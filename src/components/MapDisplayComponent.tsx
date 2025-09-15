@@ -12,7 +12,7 @@ const MODEL_SCALING_2D:THREE.Vector2 = new THREE.Vector2(SCALING, SCALING * .75)
 const MODEL_SCALING_3D:THREE.Vector3 = new THREE.Vector3(SCALING, 0, SCALING * .75)
 
 
-export function MapDisplay(){
+export function MapDisplayComponent(){
   const [sceneGeometry, setSceneGeometry] = React.useState<Model>()
   const [pointCloud, setPointCloud] = React.useState<PointCloud>()
   const { camera } = useThree()
