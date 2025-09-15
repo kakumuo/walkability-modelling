@@ -1,7 +1,6 @@
 import React from 'react'; 
 import { Box, Button, Input, Menu, Title, Typography } from "@mantine/core";
-import { IconDots, IconEdit, IconLayoutSidebar, IconLoader, IconPlus, IconSearch } from "@tabler/icons-react";
-import type { ModelConfig } from 'src/api/types';
+import { IconLayoutSidebar } from "@tabler/icons-react";
 
 
 export function HeaderComponent(props:{className:string, onToggleSidebar:()=>void}){

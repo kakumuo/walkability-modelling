@@ -60,31 +60,31 @@ type ModelConfig = {
 
 // Address details
 export interface OSMAddress {
-  ISO3166_2_lvl4: string;
-  City: string;
-  Country: string;
-  Country_code: string;
-  County: string;
-  State: string;
-  Road: string;
-  Suburb: string;
-  Town: string;
+  iso3166_2_lvl4: string;
+  city: string;
+  country: string;
+  country_code: string;
+  county: string;
+  state: string;
+  road: string;
+  suburb: string;
+  town: string;
 }
 
 export interface OSMLocation {
-  Address: OSMAddress;
-  Addresstype: string;
-  Boundingbox: [number, number, number, number];
-  Category: string;
-  Display_name: string;
-  Importance: number;
-  Lat: number | string;
-  Lon: number | string;
-  License: string;
-  Name: string;
-  Osm_id: number;
-  Osm_type: string;
-  Place_id: number;
-  Place_rank: number;
-  Type: string;
+  address: OSMAddress;
+  addresstype: string;
+  boundingbox: [number, number, number, number];
+  category: string;
+  display_name: string;
+  importance: number;
+  lat: number | string;
+  lon: number | string;
+  license: string;
+  name: string;
+  osm_id: number;
+  osm_type: string;
+  place_id: number;
+  place_rank: number;
+  type: string;
 }

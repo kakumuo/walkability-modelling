@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/rs/cors"
 )
 
 /*
@@ -40,10 +42,22 @@ const CONFIG_FILENAME = "config.json"
 const STRUCT_MODEL_FILENAME = "structModel.json"
 const POINTCLOUD_MODEL_FILENAME = "pointCloud.json"
 
+const HOST = "localhost"
+const PORT = 4001
+
+func setHeaders(w http.ResponseWriter) {
+	// cors
+	// w.Header().Set("Access-Control-Allow-Origin", fmt.Sprintf("http://%s:%d", HOST, PORT))
+	// w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	// w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+	// headers
+	w.Header().Set("Content-Type", "application/json")
+}
+
 func main() {
 	http.HandleFunc("POST /api/model", func(w http.ResponseWriter, req *http.Request) {
-
-		w.Header().Set("Content-Type", "application/json")
+		setHeaders(w)
 		responseData := ResponseMessage{Success: true}
 
 		// send resposne
@@ -122,6 +136,7 @@ func main() {
 	})
 
 	http.HandleFunc("GET /api/model", func(w http.ResponseWriter, req *http.Request) {
+		setHeaders(w)
 		responseData := ResponseMessage{Success: true}
 
 		defer func() {
@@ -156,7 +171,7 @@ func main() {
 	})
 
 	http.HandleFunc("POST /api/model/init", func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
+		setHeaders(w)
 
 		base, err := url.Parse("https://overpass-api.de/api/interpreter")
 		responseData := ResponseMessage{}
@@ -269,6 +284,7 @@ func main() {
 	})
 
 	http.HandleFunc("GET /api/model/geometry", func(w http.ResponseWriter, req *http.Request) {
+		setHeaders(w)
 		responseData := ResponseMessage{Success: true}
 
 		// send resposne
@@ -294,6 +310,7 @@ func main() {
 	})
 
 	http.HandleFunc("GET /api/model/pointCloud", func(w http.ResponseWriter, req *http.Request) {
+		setHeaders(w)
 		responseData := ResponseMessage{Success: true}
 
 		// send resposne
@@ -319,7 +336,7 @@ func main() {
 	})
 
 	http.HandleFunc("GET /api/location/search", func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
+		setHeaders(w)
 
 		base, err := url.Parse("https://nominatim.openstreetmap.org/search")
 		responseData := ResponseMessage{Success: true}
@@ -383,5 +400,6 @@ func main() {
 		}
 	})
 
-	log.Fatal(http.ListenAndServe(":4001", nil))
+	handler := cors.Default().Handler(http.DefaultServeMux)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:%d", HOST, PORT), handler))
 }

@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Button, Input, Menu, Title, Typography } from "@mantine/core";
 import { IconDots, IconEdit, IconLayoutSidebar, IconLoader, IconPlus, IconSearch } from "@tabler/icons-react";
 import type { ModelConfig } from 'src/api/types';
+import { NewModelModalComponent } from './NewModelModalComponent';
 
 
 const testData: ModelConfig[] = [
@@ -42,12 +43,12 @@ export function Sidebar(props:{className:string, show:boolean}){
     return <Box className={`${props.className} ${!props.show && 'hidden'}`}>
         <Box className={styles.header}>
             <Title order={3}>Walkability</Title>
-            <Button children={<IconPlus />} />
+            <NewModelModalComponent />
         </Box>
 
         <Title order={5}>Models</Title>
         <Box className={styles.sidebarItemList}>
-            {testData.map(t => <SidebarItem details={t} />)}
+            {testData.map((t, i) => <SidebarItem key={i} details={t} />)}
         </Box>
 
 

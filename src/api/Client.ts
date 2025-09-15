@@ -1,9 +1,9 @@
-import type { Model, OSMAddress, ResponseMessage } from "./types"
+import type { Model, OSMAddress, OSMLocation, ResponseMessage } from "./types"
 
 
 export class Client {
-    host:string
-    port:number
+    private host:string
+    private port:number 
 
     constructor (host:string, port:number){
         this.host = host
@@ -11,7 +11,7 @@ export class Client {
     }
 
     private async execEndpoint<T>(path:string, query?:Record<string, string>, body?:any):Promise<ResponseMessage<T>>{
-        var endpoint = this.host + ":" + this.port + "/" + path
+        var endpoint = `http://${this.host}:${this.port}/${path}`
         if(query) {
             endpoint += "?" + new URLSearchParams(query).toString()
         }
@@ -21,6 +21,7 @@ export class Client {
         var requestInit:RequestInit = {
             headers: headers, 
             method: 'GET', 
+            mode: 'cors'
         }
 
         if(body) {
@@ -31,13 +32,13 @@ export class Client {
         var resp = await fetch(endpoint, requestInit)
 
         console.log("Received response object:", resp)
-        var respObj:ResponseMessage<T> = await resp.json()
+        const respObj:ResponseMessage<T> = await resp.json(); 
 
         return respObj
     }
 
-    async getLocation(address:string):Promise<ResponseMessage<OSMAddress>> {
-        return await this.execEndpoint<OSMAddress>(
+    async getLocation(address:string):Promise<ResponseMessage<OSMLocation[]>> {
+        return await this.execEndpoint<OSMLocation[]>(
             "api/location/search", 
             {
                 address: address
