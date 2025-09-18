@@ -4,51 +4,16 @@ import { IconDots, IconEdit, IconLayoutSidebar, IconLoader, IconPlus, IconSearch
 import type { ModelConfig } from 'src/api/types';
 import { NewModelModalComponent } from './NewModelModalComponent';
 
-
-const testData: ModelConfig[] = [
-    {
-        Name: "AlphaModel",
-        Id: 1,
-        CreatedDate: Date.now() - 1000000,
-        UpdatedDate: Date.now() - 500000,
-    },
-    {
-        Name: "BetaModel",
-        Id: 2,
-        CreatedDate: Date.now() - 2000000,
-        UpdatedDate: Date.now() - 1000000,
-    },
-    {
-        Name: "GammaModel",
-        Id: 3,
-        CreatedDate: Date.now() - 3000000,
-        UpdatedDate: Date.now() - 2000000,
-    },
-    {
-        Name: "DeltaModel",
-        Id: 4,
-        CreatedDate: Date.now() - 4000000,
-        UpdatedDate: Date.now() - 3500000,
-    },
-    {
-        Name: "EpsilonModel",
-        Id: 5,
-        CreatedDate: Date.now() - 5000000,
-        UpdatedDate: Date.now() - 4500000,
-    },
-    ];
-
-
-export function Sidebar(props:{className:string, show:boolean}){
+export function Sidebar(props:{className:string, show:boolean, recentModels:ModelConfig[]}){
     return <Box className={`${props.className} ${!props.show && 'hidden'}`}>
         <Box className={styles.header}>
-            <Title order={3}>Walkability</Title>
+            <Title order={5}>Walkability Modelling</Title>
             <NewModelModalComponent />
         </Box>
 
-        <Title order={5}>Models</Title>
+        <Title order={4}>Models</Title>
         <Box className={styles.sidebarItemList}>
-            {testData.map((t, i) => <SidebarItem key={i} details={t} />)}
+            {props.recentModels.map((t, i) => <SidebarItem key={i} details={t} />)}
         </Box>
 
 
@@ -78,10 +43,10 @@ function SidebarItem(props:{details:ModelConfig}) {
             </Menu.Target>
 
             <Menu.Dropdown>
+                <Menu.Item>Load</Menu.Item>
                 <Menu.Item>Edit</Menu.Item>
-                <Menu.Item>Duplicate</Menu.Item>
-                <Menu.Divider />
-                <Menu.Item color="red">Delete</Menu.Item>
+                {/* <Menu.Divider />
+                <Menu.Item color="red">Delete</Menu.Item> */}
             </Menu.Dropdown>
         </Menu>
     </Box>

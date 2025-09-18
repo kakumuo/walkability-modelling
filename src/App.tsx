@@ -7,30 +7,88 @@ import { VisualizationOverlayComponent } from './components/VisualizationOverlay
 import { HeaderComponent } from './components/HeaderComponent';
 import { Canvas } from '@react-three/fiber';
 import { Sidebar } from './components/Sidebar';
+import { Client } from './api/Client';
+import { type ModelConfig, type Model, type PointCloud } from './api/types.d.ts';
 
+
+type AppData = {
+  modelId:number, 
+  setModelId:(v:any)=>void
+
+  onCreateModel:(lon:number, lat:number, rad:number, name:string)=>void
+}
+
+export const AppContext = React.createContext<AppData>({} as AppData); 
+
+const [HOST, PORT] = ["127.0.0.1", 4001]
 
 export function App() {
-  const [showSidebar, setShowSidebar] = React.useState(false)
+  const [showSidebar, setShowSidebar] = React.useState(true)
+  const [modelId, setModelId] = React.useState(-1)  
+  const [geometry, setGeometry] = React.useState<Model>(null!)
+  const [pointCloud, setPointCloud] = React.useState<PointCloud>(null!)
 
-  return <MantineProvider>
-    <Box className={styles.container} h={'100vh'} >  
-      {/* <VisualizationOverlay className={styles.visualizations} /> */}
-      
-      <Box className={styles.overlay}>
-        <Sidebar className={styles.sidebar} show={showSidebar} /> 
-       
-        <Box className={styles.overlayMain}>
-          <HeaderComponent className={styles.header} onToggleSidebar={() => setShowSidebar(!showSidebar)}  />
-          <AsideComponent className={styles.aside} />
-          <VisualizationOverlayComponent className={styles.visuals} />
-        </Box> 
+  const [recentModels, setRecentModels] = React.useState<ModelConfig[]>([]); 
+  const [recentModelsUpdateTS, setRecentModelsUpdateTS] = React.useState(0)
+
+  const [client, _] = React.useState(new Client(HOST, PORT))
+
+  React.useEffect(() => {
+    (async() => {
+        const models = await client.getModel()
+        if(models.Success)
+          setRecentModels(models.Data)
+    })()
+  }, [recentModelsUpdateTS])
+
+  const onCreateModel = React.useCallback(async (lon:number, lat:number, rad:number, name:string) => {
+    console.log("Creating model...")
+    const modelConfig = await client.upsertModel(0, name)
+    console.log(modelConfig)
+    
+    console.log("Initializing Model...")
+    await client.initModel(lat, lon, rad, modelConfig.Data.Id)
+
+    console.log("Getting Model...")
+    const geometry = await client.getGeometry(modelConfig.Data.Id)
+
+    console.log("Getting Point Cloud...")
+    const pointCloud = await client.getPointCloud(modelConfig.Data.Id)
+
+    if(geometry.Success)
+      setGeometry(geometry.Data); 
+
+    if(pointCloud.Success)
+      setPointCloud(pointCloud.Data)
+
+    setRecentModelsUpdateTS(Date.now())
+  }, []); 
+
+  return (
+  <MantineProvider>
+  <AppContext.Provider value={{modelId, setModelId, onCreateModel}}>
+
+      <Box className={styles.container} h={'100vh'} >  
+        {/* <VisualizationOverlay className={styles.visualizations} /> */}
+        
+        <Box className={styles.overlay}>
+          <Sidebar className={styles.sidebar} show={showSidebar} recentModels={recentModels} /> 
+        
+          <Box className={styles.overlayMain}>
+            <HeaderComponent className={styles.header} onToggleSidebar={() => setShowSidebar(!showSidebar)}  />
+            <AsideComponent className={styles.aside} />
+            <VisualizationOverlayComponent className={styles.visuals} />
+          </Box> 
+        </Box>
+
+        <Canvas className={styles.mapDisplay}>
+          <MapDisplayComponent pointCloud={pointCloud} sceneGeometry={geometry}/>
+        </Canvas>
       </Box>
 
-      <Canvas className={styles.mapDisplay}>
-        <MapDisplayComponent/>
-      </Canvas>
-    </Box>
-  </MantineProvider>;
+  </AppContext.Provider>
+  </MantineProvider>
+  );
 }
 
 const styles = {

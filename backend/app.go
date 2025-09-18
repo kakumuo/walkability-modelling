@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -60,7 +61,7 @@ func main() {
 		setHeaders(w)
 		responseData := ResponseMessage{Success: true}
 
-		// send resposne
+		// send response
 		defer func() {
 			responseJson, _ := json.MarshalIndent(responseData, "", "    ")
 			fmt.Fprint(w, string(responseJson))
@@ -144,30 +145,42 @@ func main() {
 			fmt.Fprint(w, string(responseJson))
 		}()
 
-		// TODO: when modelId is not included in query, select all
-		if !req.URL.Query().Has("modelId") {
-			// filePath := fmt.Sprintf("%s/%s/config.json", MODELS_PATH, "*")
-			// files
-		} else {
-			modelId := req.URL.Query().Get("modelId")
-			filePath := fmt.Sprintf("%s/%s/config.json", MODELS_PATH, modelId)
-			data, err := os.ReadFile(filePath)
+		var outputArr []ModelConfig = make([]ModelConfig, 0)
 
-			if err != nil {
-				responseData.Success = false
-				responseData.Message = fmt.Sprintf("Model not found with id: %s", modelId)
-				return
-			}
+		// TODO: when modelId is not included in query, select all
+		var filePath string
+		var modelId string = req.URL.Query().Get("modelId")
+		var hasModelId bool = !(modelId == "" || modelId == "undefined")
+		if !hasModelId {
+			filePath = fmt.Sprintf("%s/*/config.json", MODELS_PATH)
+		} else {
+			filePath = fmt.Sprintf("%s/%s/config.json", MODELS_PATH, modelId)
+		}
+
+		matches, err := filepath.Glob(filePath)
+
+		if err != nil && hasModelId {
+			responseData.Success = false
+			responseData.Message = fmt.Sprintf("Model not found with id: %s", modelId)
+			return
+		}
+
+		for _, match := range matches {
+			absPath, _ := filepath.Abs(match)
+			data, _ := os.ReadFile(absPath)
 
 			var outputObj ModelConfig
 			err = json.Unmarshal(data, &outputObj)
+
 			if err != nil {
 				responseData.Message = err.Error()
 				responseData.Success = false
 				return
 			}
-			responseData.Data = outputObj
+			outputArr = append(outputArr, outputObj)
 		}
+
+		responseData.Data = outputArr
 	})
 
 	http.HandleFunc("POST /api/model/init", func(w http.ResponseWriter, req *http.Request) {

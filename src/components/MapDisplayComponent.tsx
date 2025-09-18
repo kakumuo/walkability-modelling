@@ -12,9 +12,9 @@ const MODEL_SCALING_2D:THREE.Vector2 = new THREE.Vector2(SCALING, SCALING * .75)
 const MODEL_SCALING_3D:THREE.Vector3 = new THREE.Vector3(SCALING, 0, SCALING * .75)
 
 
-export function MapDisplayComponent(){
-  const [sceneGeometry, setSceneGeometry] = React.useState<Model>()
-  const [pointCloud, setPointCloud] = React.useState<PointCloud>()
+export function MapDisplayComponent(props:{sceneGeometry:Model, pointCloud:PointCloud}){
+  // const [sceneGeometry, setSceneGeometry] = React.useState<Model>()
+  // const [pointCloud, setPointCloud] = React.useState<PointCloud>()
   const { camera } = useThree()
 
   // set orbit controls camera
@@ -27,15 +27,15 @@ export function MapDisplayComponent(){
 
     camera.lookAt(new THREE.Vector3())       
     
-  }, [camera, sceneGeometry])
+  }, [camera, props.sceneGeometry])
 
   // get data
-  React.useEffect(() => {
-    (async() => {
-        setSceneGeometry(structData as Model)
-        setPointCloud(pointData as PointCloud)
-    })()
-  }, [])
+  // React.useEffect(() => {
+  //   (async() => {
+  //       setSceneGeometry(structData as Model)
+  //       setPointCloud(pointData as PointCloud)
+  //   })()
+  // }, [])
 
   // // generate point cloud
   // const pointCloud = React.useMemo(() => {
@@ -60,11 +60,11 @@ export function MapDisplayComponent(){
     const buildingMeshes:React.JSX.Element[] = []
     const terrainMesh:React.JSX.Element[] = []
 
-    if(!sceneGeometry || !pointCloud) return {roadMeshes, buildingMeshes, terrainMesh}
+    if(!props.sceneGeometry || !props.pointCloud) return {roadMeshes, buildingMeshes, terrainMesh}
 
     // geometry from input
     //FIXME: Mesh geometry is skewed to a certain direction
-    sceneGeometry.Structures.forEach((curStructure, i) => {
+    props.sceneGeometry.Structures.forEach((curStructure, i) => {
       if(curStructure.StructureType == "building")
         buildingMeshes.push(<BuildingMesh key={i} structure={curStructure} />)
       else if (curStructure.StructureType == "road")
@@ -75,16 +75,16 @@ export function MapDisplayComponent(){
     })
 
     // FIXME: correct radius sizing
-    terrainMesh.push(<TerrainMesh bounds={sceneGeometry.Bounds} />)
-    terrainMesh.push(<PointCloud pointCloud={pointCloud} />)
+    terrainMesh.push(<TerrainMesh bounds={props.sceneGeometry.Bounds} />)
+    terrainMesh.push(<PointCloud pointCloud={props.pointCloud} />)
     
     return {roadMeshes, buildingMeshes, terrainMesh}
-  }, [sceneGeometry, pointCloud])
+  }, [props.sceneGeometry, props.pointCloud])
 
 
 
   return <><OrbitControls  camera={camera} />
-    {sceneGeometry && <>{roadMeshes} {buildingMeshes} {terrainMesh}</>}
+    {props.sceneGeometry && <>{roadMeshes} {buildingMeshes} {terrainMesh}</>}
     
     <ambientLight intensity={0.1} />
     <directionalLight position={[0, 100, 0]} color="white"/>

@@ -33,9 +33,11 @@ export function VisualizationOverlayComponent(props:{className:string}){
 }
 
 function ListItem(props:{label:string, icon:React.JSX.Element, onClick:()=>void}) {
-    return <Tooltip label={props.label} >
-        <Box onClick={props.onClick} children={props.icon} className={styles.listItem}/>
-    </Tooltip>
+    // return <Tooltip label={props.label} >
+    //     <Box onClick={props.onClick} children={props.icon} className={styles.listItem}/>
+    // </Tooltip>
+
+    return <Box onClick={props.onClick} children={props.icon} className={styles.listItem}/>
 }
 
 
