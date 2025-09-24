@@ -8,7 +8,8 @@ import { HeaderComponent } from './components/HeaderComponent';
 import { Canvas } from '@react-three/fiber';
 import { Sidebar } from './components/Sidebar';
 import { Client } from './api/Client';
-import { type ModelConfig, type Model, type PointCloud } from './api/types.d.ts';
+import { type ModelConfig, type Model, type PointCloud } from './api/types.ts';
+import { StateMachine, type MapDisplayState, type MapDisplayStateParams } from './components/MapDisplayStateMachine.tsx';
 
 
 type AppData = {
@@ -16,6 +17,7 @@ type AppData = {
   setModelId:(v:any)=>void
 
   onCreateModel:(lon:number, lat:number, rad:number, name:string)=>void
+  mapDisplaySM:StateMachine<MapDisplayStateParams>
 }
 
 export const AppContext = React.createContext<AppData>({} as AppData); 
@@ -23,8 +25,9 @@ export const AppContext = React.createContext<AppData>({} as AppData);
 const [HOST, PORT] = ["127.0.0.1", 4001]
 
 export function App() {
-  const [showSidebar, setShowSidebar] = React.useState(true)
+  const [showSidebar, setShowSidebar] = React.useState(false)
   const [modelId, setModelId] = React.useState(-1)  
+  const [modelName, setModelName] = React.useState("")
   const [geometry, setGeometry] = React.useState<Model>(null!)
   const [pointCloud, setPointCloud] = React.useState<PointCloud>(null!)
 
@@ -32,6 +35,12 @@ export function App() {
   const [recentModelsUpdateTS, setRecentModelsUpdateTS] = React.useState(0)
 
   const [client, _] = React.useState(new Client(HOST, PORT))
+  const [mapDisplaySM, __] = React.useState(new StateMachine<MapDisplayStateParams>())
+
+  // FOR TESTING
+  React.useEffect(() => {
+    setModelId(1758226233746)
+  }, [])
 
   React.useEffect(() => {
     (async() => {
@@ -49,33 +58,46 @@ export function App() {
     console.log("Initializing Model...")
     await client.initModel(lat, lon, rad, modelConfig.Data.Id)
 
-    console.log("Getting Model...")
-    const geometry = await client.getGeometry(modelConfig.Data.Id)
-
-    console.log("Getting Point Cloud...")
-    const pointCloud = await client.getPointCloud(modelConfig.Data.Id)
-
-    if(geometry.Success)
-      setGeometry(geometry.Data); 
-
-    if(pointCloud.Success)
-      setPointCloud(pointCloud.Data)
-
     setRecentModelsUpdateTS(Date.now())
+    setModelId(modelConfig.Data.Id)
   }, []); 
+
+
+  React.useEffect(() => {
+    (async() => {
+      console.log("Getting model info...")
+      const modelDetails = await client.getModel(modelId)
+
+      console.log("Getting Model...")
+      const geometry = await client.getGeometry(modelId)
+
+      console.log("Getting Point Cloud...")
+      const pointCloud = await client.getPointCloud(modelId)
+
+      if(geometry.Success)
+        setGeometry(geometry.Data); 
+
+      if(pointCloud.Success)
+        setPointCloud(pointCloud.Data)
+
+      if(modelDetails.Success)
+        setModelName(modelDetails.Data[0].Name)
+    })()
+
+  }, [modelId])
 
   return (
   <MantineProvider>
-  <AppContext.Provider value={{modelId, setModelId, onCreateModel}}>
+  <AppContext.Provider value={{modelId, setModelId, onCreateModel, mapDisplaySM}}>
 
       <Box className={styles.container} h={'100vh'} >  
         {/* <VisualizationOverlay className={styles.visualizations} /> */}
         
         <Box className={styles.overlay}>
-          <Sidebar className={styles.sidebar} show={showSidebar} recentModels={recentModels} /> 
+          <Sidebar className={styles.sidebar} show={showSidebar} recentModels={recentModels} onLoadModel={id => setModelId(id)} /> 
         
           <Box className={styles.overlayMain}>
-            <HeaderComponent className={styles.header} onToggleSidebar={() => setShowSidebar(!showSidebar)}  />
+            <HeaderComponent className={styles.header} targetModelName={modelName} onToggleSidebar={() => setShowSidebar(!showSidebar)}  />
             <AsideComponent className={styles.aside} />
             <VisualizationOverlayComponent className={styles.visuals} />
           </Box> 

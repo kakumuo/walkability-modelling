@@ -12,3 +12,11 @@
         - https://nominatim.org/release-docs/latest/api/Overview/
         - https://wiki.openstreetmap.org/wiki/Overpass_API/Overpass_QL
         - https://overpass-turbo.eu/index.html
+
+
+TODO: 
+- Allow for selectable bulidings
+- Create pathing 
+- Create visualizations
+- Generate custom crosswalk and sidewalk geometry
+- Procedural buliding generation geometry

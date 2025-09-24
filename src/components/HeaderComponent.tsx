@@ -3,11 +3,11 @@ import { Box, Button, Input, Menu, Title, Typography } from "@mantine/core";
 import { IconLayoutSidebar } from "@tabler/icons-react";
 
 
-export function HeaderComponent(props:{className:string, onToggleSidebar:()=>void}){
+export function HeaderComponent(props:{className:string, targetModelName:string, onToggleSidebar:()=>void}){
     return  <Box data-breakout className={`${props.className} ${styles.container}`}>
         <Box className={styles.banner}>
             <Button onClick={props.onToggleSidebar}><IconLayoutSidebar /></Button>
-            <Typography>DeltaModel</Typography>
+            <Typography>{props.targetModelName}</Typography>
         </Box>
     </Box>
 }

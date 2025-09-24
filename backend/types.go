@@ -39,7 +39,7 @@ type Node struct {
 }
 
 type Structure struct {
-	Id               int
+	Id               int32
 	StructureType    string
 	Nodes            []Node
 	BoundMax         Point
@@ -52,10 +52,9 @@ func (s Structure) containsPointBounds(p Point) bool {
 }
 
 type StructureModel struct {
-	Id           int
-	Structures   []Structure
-	PathingModel PointCloud
-	Bounds       struct {
+	Id         int
+	Structures []Structure
+	Bounds     struct {
 		Center   Point
 		BoundMin Point
 		BoundMax Point
@@ -176,24 +175,25 @@ func NewStructureModel(resp OSMGeometry, rad float64, lon float64, lat float64) 
 }
 
 type PointCloudNode struct {
-	Id             int
+	Id             int32
 	Point          Point
+	ParentId       int32
 	Traversability int8
 	IsEntrance     bool
 }
 
 type PointCloud struct {
-	Points []PointCloudNode
+	Points map[int32]PointCloudNode
 }
 
 func NewPointCloud(model StructureModel, rad float64, lon float64, lat float64) PointCloud {
-	points := make([]PointCloudNode, 0)
-	curId := 0
+	points := make(map[int32]PointCloudNode)
+	var curId int32 = 1
 
 	// meter to lat:
 	radLat := rad / 111_111
 	radLon := radLat / math.Cos(lat*0.01745)
-	density := 5 // {density} nodes for every meter
+	density := 2 // {density} nodes for every meter
 
 	latInc, lonInc := (radLat / float64(density)), (radLon / float64(density))
 
@@ -226,7 +226,7 @@ func NewPointCloud(model StructureModel, rad float64, lon float64, lat float64) 
 				}
 			}
 
-			points = append(points, curNode)
+			points[curNode.Id] = curNode
 			curId += 1
 		}
 	}
@@ -242,12 +242,13 @@ func NewPointCloud(model StructureModel, rad float64, lon float64, lat float64) 
 			cur, prev := s.Nodes[i], s.Nodes[i-1]
 
 			if cur.Point.Distance(prev.Point) > BUILDING_ENTRANCE_THRESH {
-				points = append(points, PointCloudNode{
+				points[curId] = PointCloudNode{
 					Id:             curId,
 					Point:          prev.Point.Midpoint(cur.Point),
 					Traversability: 10,
 					IsEntrance:     true,
-				})
+					ParentId:       s.Id,
+				}
 
 				curId += 1
 			}
@@ -257,4 +258,100 @@ func NewPointCloud(model StructureModel, rad float64, lon float64, lat float64) 
 	return PointCloud{
 		Points: points,
 	}
+}
+
+// TODO: instead of buildling adjMatrix, add another attribute to PointCloud struct for id of next point cloud
+func NewAdjMatrix(points PointCloud, rad float64, lat float64, lon float64) map[int32][]int32 {
+	// use map of maps to ensure start node does not go to multiple of the same destination node
+	adjMatrix := make(map[int32]map[int32]bool)
+
+	radLat := rad / 111_111
+	radLon := radLat / math.Cos(lat*0.01745)
+	density := 2
+	latInc, lonInc := (radLat / float64(density)), (radLon / float64(density))
+	// DIST_THRESH := math.Sqrt(math.Pow(latInc, 2) + math.Pow(lonInc, 2))
+
+	isValid := func(p1 Point, p2 Point) bool {
+		return math.Abs(p1.X-p2.X) <= latInc && math.Abs(p1.Y-p2.Y) <= lonInc
+	}
+
+	for _, p := range points.Points {
+		adjMatrix[p.Id] = make(map[int32]bool)
+	}
+
+	for _, p1 := range points.Points {
+		if p1.Traversability == 0 {
+			continue
+		}
+		adjMatrix[p1.Id] = make(map[int32]bool)
+		for _, p2 := range points.Points {
+			if p1.Id != p2.Id && isValid(p1.Point, p2.Point) && p2.Traversability > 0 {
+				adjMatrix[p1.Id][p2.Id] = true
+				adjMatrix[p2.Id][p1.Id] = true
+			}
+		}
+	}
+
+	// convert [int][int]true => [int][]int
+	res := make(map[int32][]int32)
+	for key, val := range adjMatrix {
+		res[key] = make([]int32, len(val))
+		i := 0
+		for k := range val {
+			res[key][i] = k
+			i += 1
+		}
+	}
+
+	return res
+}
+
+type ModelPath struct {
+	StartId int32
+	EndId   int32
+	Path    []int32
+}
+
+type PathNode struct {
+	Id   int32
+	Dist int32
+	Prev *PathNode
+}
+
+func NewModelPath(adjMatrix map[int32][]int32, startId int32, endId int32) ModelPath {
+	res := ModelPath{StartId: startId, EndId: endId, Path: make([]int32, 0)}
+	queue := []*PathNode{{Id: startId, Prev: nil}}
+	visited := make(map[int32]bool)
+
+	for len(queue) > 0 {
+		curNode := queue[0]
+		queue = queue[1:]
+		visited[curNode.Id] = true
+
+		if curNode.Id == endId {
+			path := []int32{}
+			for curNode != nil {
+				path = append(path, curNode.Id)
+				curNode = curNode.Prev
+			}
+			res.Path = path
+			break
+		}
+
+		for _, next := range adjMatrix[curNode.Id] {
+			if visited[next] {
+				continue
+			}
+			queue = append(queue, &PathNode{Id: next, Prev: curNode})
+		}
+	}
+
+	// reverse
+	for i, j := 0, len(res.Path)-1; i < len(res.Path)/2; {
+		res.Path[i], res.Path[j] = res.Path[j], res.Path[i]
+		j -= 1
+		i += 1
+	}
+
+	return res
 }

@@ -4,7 +4,7 @@ import { IconDots, IconEdit, IconLayoutSidebar, IconLoader, IconPlus, IconSearch
 import type { ModelConfig } from 'src/api/types';
 import { NewModelModalComponent } from './NewModelModalComponent';
 
-export function Sidebar(props:{className:string, show:boolean, recentModels:ModelConfig[]}){
+export function Sidebar(props:{className:string, show:boolean, recentModels:ModelConfig[], onLoadModel:(modelId:number)=>void}){
     return <Box className={`${props.className} ${!props.show && 'hidden'}`}>
         <Box className={styles.header}>
             <Title order={5}>Walkability Modelling</Title>
@@ -13,7 +13,7 @@ export function Sidebar(props:{className:string, show:boolean, recentModels:Mode
 
         <Title order={4}>Models</Title>
         <Box className={styles.sidebarItemList}>
-            {props.recentModels.map((t, i) => <SidebarItem key={i} details={t} />)}
+            {props.recentModels.map((t, i) => <SidebarItem key={i} details={t} onLoadModel={props.onLoadModel} />)}
         </Box>
 
 
@@ -34,7 +34,7 @@ export function Sidebar(props:{className:string, show:boolean, recentModels:Mode
     </Box>
 }
 
-function SidebarItem(props:{details:ModelConfig}) {
+function SidebarItem(props:{details:ModelConfig, onLoadModel:(modelId:number)=>void}) {
     return <Box className={styles.sidebarItem}>
         <Typography>{props.details.Name}</Typography>
         <Menu>
@@ -43,7 +43,7 @@ function SidebarItem(props:{details:ModelConfig}) {
             </Menu.Target>
 
             <Menu.Dropdown>
-                <Menu.Item>Load</Menu.Item>
+                <Menu.Item onClick={() => props.onLoadModel(props.details.Id)}>Load</Menu.Item>
                 <Menu.Item>Edit</Menu.Item>
                 {/* <Menu.Divider />
                 <Menu.Item color="red">Delete</Menu.Item> */}

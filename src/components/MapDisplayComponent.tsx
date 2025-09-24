@@ -2,10 +2,8 @@ import { useThree } from "@react-three/fiber";
 import * as THREE from 'three'
 import { OrbitControls} from '@react-three/drei'
 import React from "react";
-import type { Model, Structure, PointCloud, Bounds } from "src/api/types"
-
-import structData from '../../backend/data/models/1757698261301/structModel.json'
-import pointData from '../../backend/data/models/1757698261301/pointCloud.json'
+import type { Model, Structure, PointCloud, Bounds, PointCloudNode } from "src/api/types"
+import { AppContext } from "../App";
 
 const SCALING = 10_000
 const MODEL_SCALING_2D:THREE.Vector2 = new THREE.Vector2(SCALING, SCALING * .75)
@@ -13,8 +11,6 @@ const MODEL_SCALING_3D:THREE.Vector3 = new THREE.Vector3(SCALING, 0, SCALING * .
 
 
 export function MapDisplayComponent(props:{sceneGeometry:Model, pointCloud:PointCloud}){
-  // const [sceneGeometry, setSceneGeometry] = React.useState<Model>()
-  // const [pointCloud, setPointCloud] = React.useState<PointCloud>()
   const { camera } = useThree()
 
   // set orbit controls camera
@@ -25,35 +21,9 @@ export function MapDisplayComponent(props:{sceneGeometry:Model, pointCloud:Point
     camera.position.y = cameraOffset.y
     camera.position.z = cameraOffset.z
 
-    camera.lookAt(new THREE.Vector3())       
+    camera.lookAt(new THREE.Vector3())
     
   }, [camera, props.sceneGeometry])
-
-  // get data
-  // React.useEffect(() => {
-  //   (async() => {
-  //       setSceneGeometry(structData as Model)
-  //       setPointCloud(pointData as PointCloud)
-  //   })()
-  // }, [])
-
-  // // generate point cloud
-  // const pointCloud = React.useMemo(() => {
-  //   const points:Point[] = []
-
-  //   if(!sceneGeometry) return points; 
-
-  //   const density = 5.0
-  //   const [,, rad] = [,, sceneGeometry.Bounds.Radius / 4]
-    
-  //   for(let x = -rad; x <= rad; x += (1 / density)) {
-  //     for(let y = -rad; y <= rad; y += (1 / density)) {
-  //       points.push({x, y})
-  //     }
-  //   }
-
-  //   return points
-  // }, [sceneGeometry])
 
   const {roadMeshes, buildingMeshes, terrainMesh} = React.useMemo(() => {
     const roadMeshes:React.JSX.Element[] = []
@@ -70,7 +40,7 @@ export function MapDisplayComponent(props:{sceneGeometry:Model, pointCloud:Point
       else if (curStructure.StructureType == "road")
         roadMeshes.push(<>
           <RoadMesh key={i} structure={curStructure} />
-          <DebugMesh key={"d-" + i} structure={curStructure}/>
+          {/* <DebugMesh key={"d-" + i} structure={curStructure}/> */}
         </>)
     })
 
@@ -115,11 +85,28 @@ function TerrainMesh (props:{bounds:Bounds}) {
 }
 
 function PointCloud (props: {pointCloud:PointCloud}) {
-  return <>{props.pointCloud.Points.map((p, i) => 
-    <mesh position={new THREE.Vector3(p.Point.X, 0, p.Point.Y).multiply(MODEL_SCALING_3D)}  key={"p-" + i} >
-      <sphereGeometry args={[.025]} />
-      <meshBasicMaterial color={"black"} />
-    </mesh>)}
+  const {mapDisplaySM} = React.useContext(AppContext)
+
+  const handlePointCloudClick = (p:PointCloudNode) => {
+    if(mapDisplaySM.isState("select_node_enter")) {
+      mapDisplaySM.setState("select_node_exit", p)
+    }
+  }
+
+  return <>{Object.values(props.pointCloud.Points).map((p, i) => 
+    <group key={"p-" + i}>
+      {/* cloud selector */}
+      <mesh onClick={() => handlePointCloudClick(p)} position={new THREE.Vector3(p.Point.X, 0, p.Point.Y).multiply(MODEL_SCALING_3D)}  >
+        <sphereGeometry args={[.1]} />
+        <meshBasicMaterial transparent opacity={0} />
+      </mesh>
+
+      <mesh position={new THREE.Vector3(p.Point.X, 0, p.Point.Y).multiply(MODEL_SCALING_3D)}  >
+        <sphereGeometry args={[.025]} />
+        <meshBasicMaterial color={'black'} />
+      </mesh>
+    </group>
+  )}
   </>
 }
 

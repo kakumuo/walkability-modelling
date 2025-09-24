@@ -28,6 +28,8 @@ import (
 			GET(modelId:int)
 		/pointcloud
 			GET(modelId:int)
+		/path
+			GET(modelId:int, startId:int32, endId:int32)
 	/location
 		/search
 			GET(address:string)
@@ -42,6 +44,7 @@ const MODELS_PATH = "data/models"
 const CONFIG_FILENAME = "config.json"
 const STRUCT_MODEL_FILENAME = "structModel.json"
 const POINTCLOUD_MODEL_FILENAME = "pointCloud.json"
+const ADJ_MATRIX_FILENAME = "adjMatrix.json"
 
 const HOST = "localhost"
 const PORT = 4001
@@ -275,24 +278,22 @@ func main() {
 
 			targetStructureFilePath := fmt.Sprintf("%s/%s", targetFolder, STRUCT_MODEL_FILENAME)
 			targetPathingFilePath := fmt.Sprintf("%s/%s", targetFolder, POINTCLOUD_MODEL_FILENAME)
+			targetAdjMatrixFilePath := fmt.Sprintf("%s/%s", targetFolder, ADJ_MATRIX_FILENAME)
 
 			structModel := NewStructureModel(geometryData, rad, lon, lat)
 			data, _ := json.MarshalIndent(structModel, "", "    ")
-			err = os.WriteFile(targetStructureFilePath, data, 0755)
+			os.WriteFile(targetStructureFilePath, data, 0755)
 			fmt.Println("Updating struct model...")
-
-			if err != nil {
-				fmt.Println(err.Error())
-			}
 
 			pointCloud := NewPointCloud(structModel, rad, lon, lat)
 			data, _ = json.MarshalIndent(pointCloud, "", "    ")
-			err = os.WriteFile(targetPathingFilePath, data, 0755)
+			os.WriteFile(targetPathingFilePath, data, 0755)
 			fmt.Println("Updating point cloud...")
 
-			if err != nil {
-				fmt.Println(err.Error())
-			}
+			adjMatrix := NewAdjMatrix(pointCloud, rad, lon, lat)
+			data, _ = json.MarshalIndent(adjMatrix, "", "    ")
+			os.WriteFile(targetAdjMatrixFilePath, data, 0755)
+			fmt.Println("Updating adj matrix...")
 		}
 	})
 
@@ -346,6 +347,37 @@ func main() {
 
 		json.Unmarshal(data, &obj)
 		responseData.Data = obj
+	})
+
+	// Creates a new path from a to b
+	http.HandleFunc("GET /api/model/path", func(w http.ResponseWriter, req *http.Request) {
+		setHeaders(w)
+		responseData := ResponseMessage{Success: true}
+
+		// send resposne
+		defer func() {
+			responseJson, _ := json.Marshal(responseData)
+			fmt.Fprint(w, string(responseJson))
+		}()
+
+		modelId := req.URL.Query().Get("modelId")
+		startId, _ := strconv.ParseInt(req.URL.Query().Get("startId"), 10, 32)
+		endId, _ := strconv.ParseInt(req.URL.Query().Get("endId"), 10, 32)
+
+		targetFilePath := fmt.Sprintf("%s/%s/%s", MODELS_PATH, modelId, ADJ_MATRIX_FILENAME)
+		_, err := os.Stat(targetFilePath)
+
+		if err != nil {
+			responseData.Message = fmt.Sprintf("Model not found with id: %s", modelId)
+			responseData.Success = false
+		}
+
+		fileData, _ := os.ReadFile(targetFilePath)
+		var adjMatrix map[int32][]int32
+		json.Unmarshal(fileData, &adjMatrix)
+		modelPath := NewModelPath(adjMatrix, int32(startId), int32(endId))
+
+		responseData.Data = modelPath
 	})
 
 	http.HandleFunc("GET /api/location/search", func(w http.ResponseWriter, req *http.Request) {

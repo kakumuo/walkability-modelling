@@ -10,7 +10,7 @@ type OSMGeometry struct {
 type OSMElement struct {
 	Bounds   OSMBounds  `json:"bounds"`
 	Geometry []OSMPoint `json:"geometry"`
-	Id       int        `json:"id"`
+	Id       int32      `json:"id"`
 	Nodes    []int      `json:"nodes"`
 	Tags     OSMTagSet  `json:"tags"`
 	Type     string     `json:"type"`

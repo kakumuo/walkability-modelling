@@ -1,25 +1,25 @@
 
-type ResponseMessage<T> = {
+export type ResponseMessage<T> = {
 	Success:boolean
 	Message:string
 	Data:T
 }
 
 // Model details
-type Model = {
+export type Model = {
   Id: number;
   Structures: Structure[];
   Bounds: Bounds
 };
 
-type Bounds = {
+export type Bounds = {
     Center: Point;
     BoundMin: Point;
     BoundMax: Point;
     Radius: number;
 };
 
-type Structure = {
+export type Structure = {
   Id: number;
   StructureType: string;
   Nodes: Node[];
@@ -28,30 +28,30 @@ type Structure = {
   StructureDetails: Record<string, string>;
 };
 
-type Point = {
+export type Point = {
   Longitude: number;
   Latitude: number;
   X: number;
   Y: number;
 };
 
-type PointCloudNode = {
+export type PointCloudNode = {
 	Id:             number
 	Point:          Point
 	Traversability: number
 	IsEntrance:     boolean
 }
 
-type PointCloud = {
-  Points: PointCloudNode[]
+export type PointCloud = {
+  Points: {[key: number]:PointCloudNode}
 }
 
-type Node = {
+export type Node = {
   Id: number;
   Point: Point;
 };
 
-type ModelConfig = {
+export type ModelConfig = {
   Name:string, 
   Id:number, 
   CreatedDate:number, 
@@ -87,4 +87,10 @@ export interface OSMLocation {
   place_id: number;
   place_rank: number;
   type: string;
+}
+
+export type ModelPath = {
+	StartId:number
+	EndId:number
+	Path:number[]
 }

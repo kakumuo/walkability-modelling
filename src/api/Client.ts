@@ -1,4 +1,4 @@
-import { type ModelConfig, type Model, type OSMAddress, type OSMLocation, type ResponseMessage, type PointCloud } from "./types.d.ts"
+import { type ModelConfig, type Model, type OSMLocation, type ResponseMessage, type PointCloud, type ModelPath } from "./types"
 
 
 export class Client {
@@ -94,6 +94,18 @@ export class Client {
             "GET", 
             "api/model/pointCloud", 
             {modelId}
+        )
+    }
+    
+    /**
+     * Pathing
+     */
+
+    async getPath(modelId:number, startId:number, endId:number) {
+        return await this.execEndpoint<ModelPath>(
+            "GET", 
+            "api/model/path", 
+            {modelId, startId, endId}
         )
     }
 
